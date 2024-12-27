@@ -1,0 +1,78 @@
+services:
+  host1_instance1:
+    image: lscr.io/linuxserver/wireshark:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    ports:
+      - "127.0.0.1:3000:3000" #http
+      - "127.0.0.1:3001:3001" #https
+    networks:
+      - instance1
+  host2_instance1:
+    image: nginxdemos/hello
+    ports:
+      - "127.0.0.1:3002:80" #http
+    networks:
+      - instance1
+  host3_instance1:
+    build: 
+      dockerfile: ./ssh.Dockerfile
+      context: ./
+    ports:
+      - "127.0.0.1:3003:22" #ssh
+    networks:
+      - instance1
+  host4_instance1:
+    image: lscr.io/linuxserver/zotero:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    ports:
+      - "127.0.0.1:3004:3000" #http
+    networks:
+      - instance1
+
+
+  host1_instance2:
+    image: lscr.io/linuxserver/wireshark:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    ports:
+      - "127.0.0.1:3010:3000" #http
+      - "127.0.0.1:3011:3001" #https
+    networks:
+      - instance2
+  host2_instance2:
+    image: nginxdemos/hello
+    ports:
+      - "127.0.0.1:3012:80" #http
+    networks:
+      - instance2
+  host3_instance2:
+    build: 
+      dockerfile: ./ssh.Dockerfile
+      context: ./
+    ports:
+      - "127.0.0.1:3013:22" #ssh
+    networks:
+      - instance2
+  host4_instance2:
+    image: lscr.io/linuxserver/zotero:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    ports:
+      - "127.0.0.1:3014:3000" #http
+    networks:
+      - instance2
+
+networks:
+  instance1:
+  instance2:
+
