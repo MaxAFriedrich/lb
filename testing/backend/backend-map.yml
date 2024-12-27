@@ -1,0 +1,69 @@
+backends:
+- id: 0
+  services:
+  - box_id: box1
+    host: 127.0.0.1:3000
+    service_id: http
+  - box_id: box1
+    host: 127.0.0.1:3001
+    service_id: https
+  - box_id: box2
+    host: 127.0.0.1:3002
+    service_id: http
+  - box_id: box3
+    host: 127.0.0.1:3003
+    service_id: ssh
+  - box_id: box4
+    host: 127.0.0.1:3004
+    service_id: http
+- id: 1
+  services:
+  - box_id: box1
+    host: 127.0.0.1:3010
+    service_id: http
+  - box_id: box1
+    host: 127.0.0.1:3011
+    service_id: https
+  - box_id: box2
+    host: 127.0.0.1:3012
+    service_id: http
+  - box_id: box3
+    host: 127.0.0.1:3013
+    service_id: ssh
+  - box_id: box4
+    host: 127.0.0.1:3014
+    service_id: http
+layout:
+- id: box1
+  name: Host 1
+  services:
+  - description: This is a service description
+    id: http
+    name: Service http on 3000
+    proxy: http
+  - description: This is a service description
+    id: https
+    name: Service https on 3001
+    proxy: https
+- id: box2
+  name: Host 2
+  services:
+  - description: This is a service description
+    id: http
+    name: Service http on 3002
+    proxy: http
+- id: box3
+  name: Host 3
+  services:
+  - description: This is a service description
+    id: ssh
+    name: Service ssh on 3003
+    proxy: ssh
+- id: box4
+  name: Host 4
+  services:
+  - description: This is a service description
+    id: http
+    name: Service http on 3004
+    proxy: http
+lb_endpoint: http://localhost:8000
