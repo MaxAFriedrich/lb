@@ -9,7 +9,7 @@ import (
 func requestHandler(w http.ResponseWriter, r *http.Request) {
 	pathComponents := strings.Split(r.URL.Path, "/")
 	// expected format: /instance_id/box_id/service_id
-	if len(pathComponents) != 4 {
+	if len(pathComponents) < 4 {
 		w.WriteHeader(http.StatusBadRequest)
 		_, err := w.Write([]byte("Invalid path, expected format: /instance_id/box_id/service_id"))
 		if err != nil {
