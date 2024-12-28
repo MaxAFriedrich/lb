@@ -1,9 +1,13 @@
 from pathlib import Path
 
-import requests
+import httpx
+import websockets
 import yaml
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from starlette import websockets
+from starlette.responses import StreamingResponse
+from starlette.websockets import WebSocketDisconnect, WebSocket
 
 app = FastAPI()
 
@@ -79,12 +83,50 @@ def read_root():
 
 
 # proxy endpoints are in format /proxy/instance_id/box_id/service_id
-@app.get("/proxy/{instance_id}/{box_id}/{service_id}")
-def proxy(instance_id: str, box_id: str, service_id: str,
-          response_class=HTMLResponse):
-    res = requests.get(f"{lb_endpoint}/{instance_id}/{box_id}/{service_id}")
-    # TODO make this into a real http proxy
-    return HTMLResponse(content=res.text)
+
+@app.get("/proxy/{instance_id}/{box_id}/{service_id}/{path:path}")
+@app.post("/proxy/{instance_id}/{box_id}/{service_id}/{path:path}")
+@app.put("/proxy/{instance_id}/{box_id}/{service_id}/{path:path}")
+@app.delete("/proxy/{instance_id}/{box_id}/{service_id}/{path:path}")
+@app.patch("/proxy/{instance_id}/{box_id}/{service_id}/{path:path}")
+@app.options("/proxy/{instance_id}/{box_id}/{service_id}/{path:path}")
+@app.head("/proxy/{instance_id}/{box_id}/{service_id}/{path:path}")
+@app.trace("/proxy/{instance_id}/{box_id}/{service_id}/{path:path}")
+async def proxy_http(instance_id: str, box_id: str, service_id: str, path: str,
+                     request: Request):
+    url = f"{lb_endpoint}/{instance_id}/{box_id}/{service_id}/{path}"
+    if request.query_params:
+        url += f"?{request.query_params}"
+    async with httpx.AsyncClient() as client:
+        proxy_request = client.build_request(
+            method=request.method,
+            url=url,
+            headers=request.headers.raw,
+            content=await request.body()
+        )
+        proxy_response = await client.send(proxy_request, stream=True)
+        return StreamingResponse(
+            proxy_response.aiter_raw(),
+            status_code=proxy_response.status_code,
+            headers=proxy_response.headers
+        )
+
+
+@app.websocket("/proxy/{instance_id}/{box_id}/{service_id}/{path:path}")
+async def proxy_websocket(websocket: WebSocket, instance_id: str, box_id: str,
+                          service_id: str, path: str):
+    await websocket.accept()
+    lb_endpoint_hostname = lb_endpoint.split("://")[1]
+    url = (f"ws://{lb_endpoint_hostname}/{instance_id}/{box_id}/{service_id}/"
+           f"{path}")
+    async with websockets.connect(url) as ws:
+        try:
+            async for message in websocket.iter_text():
+                await ws.send(message)
+                response = await ws.recv()
+                await websocket.send_text(response)
+        except WebSocketDisconnect:
+            await ws.close()
 
 
 if __name__ == "__main__":
