@@ -2,59 +2,105 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net"
 	"net/http"
 	"strings"
 )
 
+type BackendHost struct {
+	Host       string
+	Port       string
+	Proxy      string
+	TargetPath string
+}
+
+func handleError(w http.ResponseWriter, err error, code int) {
+	w.WriteHeader(code)
+	_, err2 := w.Write([]byte(err.Error()))
+	if err2 != nil {
+		return
+	}
+	log.Println(err)
+}
+
 func requestHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO parse the url to get the stuff for the proxy
 	pathComponents := strings.Split(r.URL.Path, "/")
-	// expected format: /instance_id/box_id/service_id
-	if len(pathComponents) < 4 {
-		w.WriteHeader(http.StatusBadRequest)
-		_, err := w.Write([]byte("Invalid path, expected format: /instance_id/box_id/service_id"))
-		if err != nil {
-			return
-		}
+	// expected format: /instance_id/box_id/service_id/target_path
+	if len(pathComponents) < 5 {
+		handleError(w, fmt.Errorf("invalid path, expected format: /instance_id/box_id/service_id/target_path"), http.StatusBadRequest)
 		return
 	}
 
 	instanceId := pathComponents[1]
 	boxId := pathComponents[2]
 	serviceId := pathComponents[3]
+	targetPath := pathComponents[4]
 
 	host, err := getHostPort(instanceId, boxId, serviceId)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, err2 := w.Write([]byte("Error getting host"))
-		if err2 != nil {
-			return
-		}
+		handleError(w, err, http.StatusInternalServerError)
 		return
 	}
 
 	proxy, err := getProxyType(boxId, serviceId)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, err2 := w.Write([]byte("Error getting proxy"))
-		if err2 != nil {
-			return
-		}
+		handleError(w, err, http.StatusInternalServerError)
 		return
 	}
 
 	if proxy == "" || host == "" {
-		w.WriteHeader(http.StatusNotFound)
-		_, err2 := w.Write([]byte("Host or proxy not found"))
-		if err2 != nil {
-			return
-		}
+		handleError(w, fmt.Errorf("host or proxy not found"), http.StatusNotFound)
 		return
 	}
 
-	out := fmt.Sprintf("instance_id: %s, box_id: %s, service_id: %s, host: %s, proxy: %s\n", instanceId, boxId, serviceId, host, proxy)
-
-	_, err2 := w.Write([]byte(out))
-	if err2 != nil {
+	hostname, port, err := net.SplitHostPort(host)
+	if err != nil {
+		handleError(w, err, http.StatusInternalServerError)
 		return
 	}
+
+	backHost := BackendHost{
+		Host:       hostname,
+		Port:       port,
+		Proxy:      proxy,
+		TargetPath: targetPath,
+	}
+
+	proxyRequest(w, r, backHost)
+}
+
+func proxyRequest(w http.ResponseWriter, r *http.Request, host BackendHost) {
+	switch host.Proxy {
+	case "http":
+		proxyHTTP(w, r, host, false)
+		break
+	case "https":
+		proxyHTTP(w, r, host, true)
+		break
+	case "ssh":
+		proxySSH(w, r, host)
+		break
+	case "udp":
+		proxyUDP(w, r, host)
+		break
+	case "tcp":
+		proxyTCP(w, r, host)
+		break
+	default:
+		handleError(w, fmt.Errorf("unsupported proxy type"), http.StatusNotImplemented)
+	}
+}
+
+func proxySSH(w http.ResponseWriter, r *http.Request, host BackendHost) {
+	handleError(w, fmt.Errorf("ssh proxy not implemented"), http.StatusNotImplemented)
+}
+
+func proxyUDP(w http.ResponseWriter, r *http.Request, host BackendHost) {
+	handleError(w, fmt.Errorf("udp proxy not implemented"), http.StatusNotImplemented)
+}
+
+func proxyTCP(w http.ResponseWriter, r *http.Request, host BackendHost) {
+	handleError(w, fmt.Errorf("tcp proxy not implemented"), http.StatusNotImplemented)
 }
