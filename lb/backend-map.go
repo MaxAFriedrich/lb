@@ -28,7 +28,7 @@ type BackendMap struct {
 	LbEndpoint string `yaml:"lb_endpoint"`
 }
 
-func parseBackendMap(file string) error {
+func parseBackendMap(file string, backendMap **BackendMap) error {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return err
@@ -40,25 +40,24 @@ func parseBackendMap(file string) error {
 	return nil
 }
 
-func getHostPort(instanceId string, boxId string, serviceId string) (string, error) {
-	if backendMap == nil {
-		fmt.Println("backendMap is nil")
-		return "", nil
-	}
-	// TODO optimise this using a map
-	for _, backend := range backendMap.Backends {
-		if backend.ID == instanceId {
-			for _, service := range backend.Services {
-				if service.BoxID == boxId && service.ServiceID == serviceId {
-					return service.Host, nil
-				}
-			}
-		}
-	}
-	return "", nil
-}
-
-func getProxyType(boxId string, serviceId string) (string, error) {
+//	func getHostPort(instanceId string, boxId string, serviceId string) (string, error) {
+//		if backendMap == nil {
+//			fmt.Println("backendMap is nil")
+//			return "", nil
+//		}
+//		// TODO optimise this using a map
+//		for _, backend := range backendMap.Backends {
+//			if backend.ID == instanceId {
+//				for _, service := range backend.Services {
+//					if service.BoxID == boxId && service.ServiceID == serviceId {
+//						return service.Host, nil
+//					}
+//				}
+//			}
+//		}
+//		return "", nil
+//	}
+func (backendMap *BackendMap) getProxyType(boxId string, serviceId string) (string, error) {
 	if backendMap == nil {
 		fmt.Println("backendMap is nil")
 		return "", nil
