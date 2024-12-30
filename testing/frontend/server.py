@@ -61,6 +61,7 @@ def build_index_html() -> str:
            "border-radius: 10px;}"
            "h1{color: #fff;}"
            "h2{color: #fff;}"
+           "a{color: #fff; text-decoration: none;}"
            "</style>"
            "</head><body>")
     for instance in backend_map["backends"]:
