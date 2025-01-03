@@ -101,11 +101,11 @@ func registerRootHandler(backendMap *BackendMap) {
 	proxy := &httputil.ReverseProxy{
 		Director: func(req *http.Request) {
 			proxyPathCookie, err := req.Cookie("Proxy-Path")
-			host := proxyPathToHost[proxyPathCookie.Value]
 			if err != nil {
 				log.Println(err)
 				return
 			}
+			host := proxyPathToHost[proxyPathCookie.Value]
 			hostname, port, err := net.SplitHostPort(host)
 			if err != nil {
 				log.Println(err)
