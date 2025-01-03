@@ -11,9 +11,6 @@ backends:
     host: 127.0.0.1:3002
     service_id: http
   - box_id: box3
-    host: 127.0.0.1:3003
-    service_id: ssh
-  - box_id: box4
     host: 127.0.0.1:3004
     service_id: http
 - id: 1
@@ -28,9 +25,6 @@ backends:
     host: 127.0.0.1:3012
     service_id: http
   - box_id: box3
-    host: 127.0.0.1:3013
-    service_id: ssh
-  - box_id: box4
     host: 127.0.0.1:3014
     service_id: http
 layout:
@@ -54,13 +48,6 @@ layout:
     proxy: http
 - id: box3
   name: Host 3
-  services:
-  - description: This is a service description
-    id: ssh
-    name: Service ssh on 3003
-    proxy: ssh
-- id: box4
-  name: Host 4
   services:
   - description: This is a service description
     id: http

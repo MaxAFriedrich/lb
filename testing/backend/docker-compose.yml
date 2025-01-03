@@ -17,14 +17,6 @@ services:
     networks:
       - instance1
   host3_instance1:
-    build: 
-      dockerfile: ./ssh.Dockerfile
-      context: ./
-    ports:
-      - "127.0.0.1:3003:22" #ssh
-    networks:
-      - instance1
-  host4_instance1:
     image: lscr.io/linuxserver/zotero:latest
     environment:
       - PUID=1000
@@ -54,14 +46,6 @@ services:
     networks:
       - instance2
   host3_instance2:
-    build: 
-      dockerfile: ./ssh.Dockerfile
-      context: ./
-    ports:
-      - "127.0.0.1:3013:22" #ssh
-    networks:
-      - instance2
-  host4_instance2:
     image: lscr.io/linuxserver/zotero:latest
     environment:
       - PUID=1000
