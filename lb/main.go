@@ -1,10 +1,9 @@
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	"fmt"
-	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -43,13 +42,13 @@ func main() {
 			case "https":
 				registerHttp(proxyPath, service.Host, true)
 				break
-			case "ssh":
-				registerSsh(proxyPath, service.Host)
 			default:
 				panic("Unknown proxy type")
 			}
 		}
 	}
+
+	registerRootHandler(backendMap)
 
 	hostPort := strings.Split(backendMap.LbEndpoint, "//")[1]
 
@@ -68,12 +67,6 @@ func addCleanRedirect(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func registerSsh(path string, host string) {
-	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "SSH not supported, would connect to: "+host, http.StatusNotImplemented)
-	})
-}
-
 func registerHttp(proxyPath string, host string, https bool) {
 	hostname, port, err := net.SplitHostPort(host)
 	if err != nil {
@@ -81,10 +74,6 @@ func registerHttp(proxyPath string, host string, https bool) {
 	}
 	proxy := &httputil.ReverseProxy{
 		Director: func(req *http.Request) {
-			origin := req.URL.Host
-			ctx := context.WithValue(req.Context(), "origin", origin)
-			req = req.WithContext(ctx)
-
 			req.URL.Scheme = "http"
 			if https {
 				req.URL.Scheme = "https"
@@ -93,22 +82,7 @@ func registerHttp(proxyPath string, host string, https bool) {
 			req.URL.Path = "/" + strings.TrimPrefix(req.URL.Path, proxyPath)
 		},
 		ModifyResponse: func(response *http.Response) error {
-			origin, ok := response.Request.Context().Value("origin").(string)
-			if !ok || origin == "" {
-				return nil // or handle the error appropriately
-			}
-
-			// make sure if the origin is in the body, it is replaced with the proxy path
-			// TODO shim document.location, document.URL, window.location to use the proxy path
-			// TODO check for links that start with / and replace them with the proxy path
-			bodyBytes, err := io.ReadAll(response.Body)
-			if err != nil {
-				return err
-			}
-			bodyString := string(bodyBytes)
-			bodyString = strings.ReplaceAll(bodyString, origin, proxyPath)
-			response.Body = io.NopCloser(strings.NewReader(bodyString))
-
+			response.Header.Set("Set-Cookie", "Proxy-Path="+proxyPath+"; Path=/;SameSite=Strict")
 			return nil
 		},
 		Transport: &http.Transport{
@@ -118,4 +92,33 @@ func registerHttp(proxyPath string, host string, https bool) {
 	}
 
 	http.Handle(proxyPath, proxy)
+}
+
+func registerRootHandler(backendMap *BackendMap) {
+	proxyPathToHost := backendMap.proxyPathToHost()
+	proxyPathToType := backendMap.proxyPathToType()
+
+	proxy := &httputil.ReverseProxy{
+		Director: func(req *http.Request) {
+			proxyPathCookie, err := req.Cookie("Proxy-Path")
+			host := proxyPathToHost[proxyPathCookie.Value]
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			hostname, port, err := net.SplitHostPort(host)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			req.URL.Scheme = proxyPathToType[proxyPathCookie.Value]
+			req.URL.Host = net.JoinHostPort(hostname, port)
+		},
+		Transport: &http.Transport{
+			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+			DisableKeepAlives: true, // Disable keep-alives to ensure new connections for each request
+		},
+	}
+
+	http.Handle("/", proxy)
 }

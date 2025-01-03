@@ -40,29 +40,37 @@ func parseBackendMap(file string, backendMap **BackendMap) error {
 	return nil
 }
 
-//	func getHostPort(instanceId string, boxId string, serviceId string) (string, error) {
-//		if backendMap == nil {
-//			fmt.Println("backendMap is nil")
-//			return "", nil
-//		}
-//		// TODO optimise this using a map
-//		for _, backend := range backendMap.Backends {
-//			if backend.ID == instanceId {
-//				for _, service := range backend.Services {
-//					if service.BoxID == boxId && service.ServiceID == serviceId {
-//						return service.Host, nil
-//					}
-//				}
-//			}
-//		}
-//		return "", nil
-//	}
+func (backendMap *BackendMap) proxyPathToHost() map[string]string {
+	proxyPathToHost := make(map[string]string)
+	for _, backend := range backendMap.Backends {
+		for _, service := range backend.Services {
+			proxyPath := fmt.Sprintf("/%s/%s/%s/", backend.ID, service.BoxID, service.ServiceID)
+			proxyPathToHost[proxyPath] = service.Host
+		}
+	}
+	return proxyPathToHost
+}
+
+func (backendMap *BackendMap) proxyPathToType() map[string]string {
+	proxyPathToType := make(map[string]string)
+	for _, backend := range backendMap.Backends {
+		for _, service := range backend.Services {
+			proxyPath := fmt.Sprintf("/%s/%s/%s/", backend.ID, service.BoxID, service.ServiceID)
+			proxyType, err := backendMap.getProxyType(service.BoxID, service.ServiceID)
+			if err != nil {
+				panic(err)
+			}
+			proxyPathToType[proxyPath] = proxyType
+		}
+	}
+	return proxyPathToType
+}
+
 func (backendMap *BackendMap) getProxyType(boxId string, serviceId string) (string, error) {
 	if backendMap == nil {
 		fmt.Println("backendMap is nil")
 		return "", nil
 	}
-	// TODO optimise this using a map
 	for _, layout := range backendMap.Layout {
 		if layout.ID == boxId {
 			for _, service := range layout.Services {
